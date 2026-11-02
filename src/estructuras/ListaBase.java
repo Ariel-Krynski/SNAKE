@@ -1,7 +1,8 @@
+
 package estructuras;
 
 import java.util.Iterator;
-import java.util.NoSuchElementException; //obetener un elemento que no existe
+import java.util.NoSuchElementException;
 
 public abstract class ListaBase<T> implements Lista<T> {
 
@@ -15,7 +16,11 @@ public abstract class ListaBase<T> implements Lista<T> {
     public int indiceDe(T elemento) {
         for (int i = 0; i < tamanio(); i++) {
             T actual = obtener(i);
-            boolean iguales = actual == null ? elemento == null : actual.equals(elemento);
+
+            boolean iguales = actual == null
+                    ? elemento == null
+                    : actual.equals(elemento);
+
             if (iguales) {
                 return i;
             }
@@ -23,25 +28,27 @@ public abstract class ListaBase<T> implements Lista<T> {
         return -1;
     }
 
-    @Override
+    // Comprobar si contiene un elemento
     public boolean contiene(T elemento) {
         return indiceDe(elemento) >= 0;
     }
 
-    @Override
+    // Quitar un elemento
     public boolean quitar(T elemento) {
         int indice = indiceDe(elemento);
+
         if (indice < 0) {
             return false;
         }
+
         eliminar(indice);
         return true;
     }
 
     // Recorrido con for-each
-    @Override
     public Iterator<T> iterator() {
         return new Iterator<T>() {
+
             private int actual = 0;
 
             @Override
@@ -54,6 +61,7 @@ public abstract class ListaBase<T> implements Lista<T> {
                 if (!hasNext()) {
                     throw new NoSuchElementException();
                 }
+
                 return obtener(actual++);
             }
         };

@@ -1,10 +1,9 @@
+
 package estructuras;
 
-import java.util.Iterator;
+public interface Lista<T> extends Iterable<T>  { //pequeña modificacion
 
-public interface Lista<T> {
-
-    // Agregar...
+    // Altas
     void agregar(T elemento);
 
     void insertar(int indice, T elemento);
@@ -18,14 +17,8 @@ public interface Lista<T> {
 
     boolean estaVacia();
 
-    // Eliminar...
+    // Bajas
     T eliminar(int indice);
 
     void vaciar();
-
-    boolean contiene(T elemento);
-
-    boolean quitar(T elemento);
-
-    Iterator<T> iterator();
 }
