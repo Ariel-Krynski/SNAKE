@@ -88,7 +88,7 @@ public class JuegoEscena extends Escena {
             comida = new Manzana(p);
         }
     }
-    
+
     public void dibujar(Graphics2D grafico) {
         grafico.setColor(new Color(13,20,28)); grafico.fillRect(0,0,COLUMNAS*CELDA,FILAS*CELDA);
         grafico.setColor(new Color(27,39,49));
@@ -101,7 +101,7 @@ public class JuegoEscena extends Escena {
         Texto.izquierda(grafico,"Z deshacer (-5)   P pausa   ESC menú",16,FILAS*CELDA+62,15,Color.LIGHT_GRAY);
         if (pausa) {
             grafico.setColor(new Color(0,0,0,170)); grafico.fillRect(0,0,COLUMNAS*CELDA,FILAS*CELDA);
-            Texto.centrado(grafico,"PAUSA",COLUMNAS*CELDA/2.0,FILAS*CELDA/2.0,38,Color.WHITE);
+            Texto.centrado(grafico,"PAUSA DE HIDATRACIÓN",COLUMNAS*CELDA/2.0,FILAS*CELDA/2.0,38,Color.WHITE);
         }
     }
 }

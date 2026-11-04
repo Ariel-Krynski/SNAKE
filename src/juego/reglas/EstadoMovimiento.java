@@ -1,5 +1,9 @@
 package juego.reglas;
 
+//Representa una copia del estado actual
+// del movimiento de un personaje, almacenando su cuerpo,
+// la dirección en la que se desplaza y los puntos acumulados
+
 import estructuras.Lista;
 import estructuras.ListaDoble;
 import juego.entidades.Direccion;
