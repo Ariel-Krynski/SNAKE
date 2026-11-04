@@ -88,6 +88,17 @@ public class Serpiente {
         crecer++;
     }
 
+    // Regla del deshacer: el crecimiento pendiente se guarda en cada foto y se restaura
+    // con Z, para que deshacer el paso en que comió también anule el crecimiento.
+    public int getCrecer() {
+        return crecer;
+    }
+
+    public void setCrecer(int crecer) {
+        if (crecer < 0) throw new IllegalArgumentException("Crecimiento inválido");
+        this.crecer = crecer;
+    }
+
     public void encoger() {
         if (cuerpo.tamanio() > 3) {
             cuerpo.eliminar(cuerpo.tamanio() - 1);
