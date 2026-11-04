@@ -31,6 +31,12 @@ public class JuegoEscena extends Escena {
     // Los 100 px que faltan hasta los 600 de la ventana son la franja del HUD.
     private static final int CELDA = 20, COLUMNAS = 40, FILAS = 25;
 
+    // Reglas con número: cuánto cuesta deshacer, cuántos pasos sin comer terminan la
+    // partida y desde cuántos pasos se avisa en el HUD que se está por terminar.
+    private static final int COSTO_DESHACER = 5;
+    private static final int MAX_PASOS_SIN_COMER = 800;
+    private static final int AVISO_PASOS_SIN_COMER = 650;
+
     // La serpiente recibe por constructor la lista donde guardará su cuerpo
     // (se depende de lo que hace la lista, no de cómo está hecha por dentro).
     private final Serpiente serpiente = new Serpiente(new ListaDoble<Posicion>());
@@ -88,8 +94,8 @@ public class JuegoEscena extends Escena {
         if (getEntrada().fuePresionada(KeyEvent.VK_RIGHT)) {
             registrarGiro(Direccion.DERECHA);
         }
-        // Z: deshace, pero solo si hay algo en la pila (desapilar con pila vacía lanzaría excepción).
-        if (getEntrada().fuePresionada(KeyEvent.VK_Z) && !historial.estaVacia()) {
+        // Z: deshace, solo si hay algo en la pila y alcanzan los puntos para pagarlo.
+        if (getEntrada().fuePresionada(KeyEvent.VK_Z) && puedeDeshacer()) {
             deshacer();
         }
         // En pausa no avanza el temporizador, por eso el juego se congela.
@@ -122,8 +128,11 @@ public class JuegoEscena extends Escena {
         if (!giros.estaVacia()) {
             serpiente.cambiarDireccion(giros.desencolar());
         }
-        // 2) Guarda el estado ANTES de mover: así Z vuelve a como estaba antes de este paso.
-        guardarEstado();
+        // 2) Saca la foto ANTES de mover: así Z vuelve a como estaba antes de este paso.
+        //    Todavía no se apila: falta saber cuántos puntos gana el paso (ver el punto 6).
+        int puntosAntes = serpiente.getPuntos();
+        EstadoMovimiento foto = new EstadoMovimiento(serpiente.getCuerpo(), serpiente.getDireccion(),
+                serpiente.getCrecer(), comida, pasosDesdeComida);
         // 3) Mueve la serpiente.
         serpiente.mover();
         pasosDesdeComida++;
@@ -143,19 +152,28 @@ public class JuegoEscena extends Escena {
             generarComida();
             pasosDesdeComida = 0;
         }
-        // 6) Anti-trabado: 800 pasos sin comer termina la partida.
-        if (pasosDesdeComida > 800) {
+        // 6) Ya se sabe cuánto sumó o restó el paso: se completa la foto y se apila.
+        foto.setPuntosGanados(serpiente.getPuntos() - puntosAntes);
+        historial.apilar(foto);
+        // 7) Anti-trabado: más de 800 pasos sin comer termina la partida.
+        //    Desde los 650 el HUD avisa cuántos pasos quedan (ver dibujar).
+        if (pasosDesdeComida > MAX_PASOS_SIN_COMER) {
             terminado = true;
             getContexto().irA(new FinEscena(serpiente.getPuntos()));
         }
     }
 
-    // Apila una "foto" del estado (cuerpo, dirección y puntos). EstadoMovimiento es de juego.reglas.
-    private void guardarEstado() {
-        historial.apilar(new EstadoMovimiento(serpiente.getCuerpo(), serpiente.getDireccion(), serpiente.getPuntos()));
+    // Regla: deshacer es «a cambio de puntos». Solo se puede si, sacando lo que ganó el
+    // último paso, quedan al menos 5 puntos para pagarlo. tope() mira la foto sin sacarla.
+    private boolean puedeDeshacer() {
+        if (historial.estaVacia()) {
+            return false;
+        }
+        return serpiente.getPuntos() - historial.tope().getPuntosGanados() >= COSTO_DESHACER;
     }
 
     // Deshace el último movimiento: desapila la foto más reciente (LIFO) y la restaura.
+    // Rebobina el paso completo: cuerpo, dirección, crecimiento, comida y contador de pasos.
     private void deshacer() {
         EstadoMovimiento estado = historial.desapilar();
         // Vacía el cuerpo actual y lo reconstruye copiando posición por posición.
@@ -167,8 +185,16 @@ public class JuegoEscena extends Escena {
             serpiente.getCuerpo().agregar(new Posicion(p.getX(), p.getY()));
         }
         serpiente.restaurarDireccion(estado.getDireccion());
-        // El deshacer cuesta 5 puntos; Math.max(0, ...) evita que el puntaje quede negativo.
-        serpiente.setPuntos(Math.max(0, estado.getPuntos() - 5));
+        // Si el paso deshecho fue el que comió, la serpiente deja de crecer por esa comida.
+        serpiente.setCrecer(estado.getCrecer());
+        // Vuelve la comida que había antes del paso (la manzana comida reaparece en su lugar)
+        // y el contador de pasos sin comer de ese momento.
+        comida = estado.getComida();
+        pasosDesdeComida = estado.getPasosDesdeComida();
+        // Puntos: a los actuales se les saca lo que ganó ese paso y el costo de deshacer.
+        // Se calcula sobre los actuales, no sobre los guardados, para que cada Z cobre sus 5.
+        // puedeDeshacer() ya garantizó que el resultado no queda negativo.
+        serpiente.setPuntos(serpiente.getPuntos() - estado.getPuntosGanados() - COSTO_DESHACER);
         // Los giros que estaban esperando ya no corresponden a la situación restaurada.
         giros.vaciar();
     }
@@ -214,6 +240,11 @@ public class JuegoEscena extends Escena {
         Texto.izquierda(grafico, "Puntaje: " + serpiente.getPuntos(), 16, FILAS * CELDA + 30, 18, Color.WHITE);
         Texto.izquierda(grafico, "Tamaño: " + serpiente.getCuerpo().tamanio(), 190, FILAS * CELDA + 30, 16, new Color(130, 245, 150));
         Texto.izquierda(grafico, "Z deshacer (-5)   P pausa   ESC menú", 16, FILAS * CELDA + 62, 15, Color.LIGHT_GRAY);
+        // Regla del límite de pasos: se avisa antes de cortar la partida por no comer.
+        if (pasosDesdeComida > AVISO_PASOS_SIN_COMER) {
+            int quedan = MAX_PASOS_SIN_COMER - pasosDesdeComida;
+            Texto.derecha(grafico, "¡Comé algo! Quedan " + quedan + " pasos", COLUMNAS * CELDA - 16, FILAS * CELDA + 30, 16, new Color(255, 120, 120));
+        }
 
         // Pausa: velo negro semitransparente (el 4.º valor, 170, es la opacidad) y cartel centrado.
         if (pausa) {
