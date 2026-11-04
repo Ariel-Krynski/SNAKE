@@ -139,32 +139,23 @@ public class Mundo implements Actualizable, Dibujable, Iterable<Entidad> {
     }
 
     // Copia de trabajo del cuadro
-    // Copia de trabajo del cuadro
     private void refrescar() {
         int n = entidades.tamanio();
-
         if (!sucio && n == cantidad) {
             return;
         }
-
         if (cuadro.length < n) {
             cuadro = new Entidad[Math.max(n, cuadro.length * 2)];
         }
-
         int i = 0;
-
-        for (int j = 0; j < entidades.tamanio(); j++) {
-            Entidad e = entidades.obtener(j);
-
+        for (Entidad e : entidades) {
             if (i < cuadro.length) {
                 cuadro[i++] = e;
             }
         }
-
         for (int k = i; k < cuadro.length; k++) {
             cuadro[k] = null;
         }
-
         cantidad = i;
         sucio = false;
     }
