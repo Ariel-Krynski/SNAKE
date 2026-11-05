@@ -272,10 +272,11 @@ public class JuegoEscena extends Escena {
             Texto.izquierda(grafico, "¡Comé algo! Quedan " + quedan + " pasos", 16, FILAS * CELDA + 88, 14, new Color(255, 120, 120));
         }
         // Cuenta regresiva de la podrida: se redondea para arriba, así nunca muestra 0 s
-        // mientras todavía está en el tablero.
+        // mientras todavía está en el tablero. Se calcula en proporción a los 10 s y no
+        // multiplicando por 0,13: los 77 pasos duran 10,01 s y al aparecer mostraba 11.
         if (comida.vence()) {
             int pasosQueQuedan = PASOS_PODRIDA - pasosDeLaComida;
-            int segundos = (int) Math.ceil(pasosQueQuedan * SEGUNDOS_POR_PASO);
+            int segundos = (int) Math.ceil((double) pasosQueQuedan * SEGUNDOS_PODRIDA / PASOS_PODRIDA);
             Texto.izquierda(grafico, "Podrida: se va en " + segundos + " s", 320, FILAS * CELDA + 62, 16, REF_PODRIDA.getColor());
         }
         // Referencia de manzanas, abajo a la derecha.
