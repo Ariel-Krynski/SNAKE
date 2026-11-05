@@ -24,6 +24,9 @@ public class EstadoMovimiento {
     // copiarla porque cada comida nueva es un objeto nuevo: la vieja no cambia.
     private final Comida comida;
     private final int pasosDesdeComida;
+    // Cuántos pasos llevaba en el tablero la comida de ese momento. Sin esto, deshacer
+    // hasta antes de que venciera una podrida la traería con el tiempo ya agotado.
+    private final int pasosDeLaComida;
     // Lo que el paso sumó o restó al puntaje (negativo si comió una podrida). Se guarda
     // la diferencia y no el puntaje: así cada Z cobra sobre los puntos actuales, y
     // varios Z seguidos cobran el costo cada uno.
@@ -31,11 +34,11 @@ public class EstadoMovimiento {
 
     // Constructor: se llama ANTES de mover, para copiar el estado previo al paso.
     public EstadoMovimiento(Lista<Posicion> original, Direccion direccion, int crecer,
-                            Comida comida, int pasosDesdeComida) {
+                            Comida comida, int pasosDesdeComida, int pasosDeLaComida) {
         if (original == null || direccion == null || comida == null) {
             throw new IllegalArgumentException("El estado guardado está incompleto");
         }
-        if (crecer < 0 || pasosDesdeComida < 0) {
+        if (crecer < 0 || pasosDesdeComida < 0 || pasosDeLaComida < 0) {
             throw new IllegalArgumentException("El estado guardado tiene valores negativos");
         }
         // Se copia el cuerpo: la lista de la serpiente cambia en cada paso, y si se
@@ -49,6 +52,7 @@ public class EstadoMovimiento {
         this.crecer = crecer;
         this.comida = comida;
         this.pasosDesdeComida = pasosDesdeComida;
+        this.pasosDeLaComida = pasosDeLaComida;
     }
 
     // Se completa al final del paso, cuando ya se sabe si comió. Acepta negativos a
@@ -75,6 +79,10 @@ public class EstadoMovimiento {
 
     public int getPasosDesdeComida() {
         return pasosDesdeComida;
+    }
+
+    public int getPasosDeLaComida() {
+        return pasosDeLaComida;
     }
 
     public int getPuntosGanados() {
