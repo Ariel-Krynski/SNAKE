@@ -22,6 +22,17 @@ public abstract class Comida implements EfectoComida {// Clase abstracta que obl
         this.posicion=posicion;
     }
 
+    // La referencia del HUD dibuja cada tipo con su color, sin repetirlo en la escena.
+    public Color getColor() {
+        return color;
+    }
+
+    // Si la comida desaparece sola cuando pasa un tiempo sin que la coman. Por defecto
+    // no: sólo la podrida la sobrescribe, para darle al jugador la chance de esquivarla.
+    public boolean vence() {
+        return false;
+    }
+
     public void dibujar(Graphics2D g, int celda) {// Asigna las variables
         g.setColor(color); // Selecciona el color de la comida como actual
         g.fillOval(posicion.getX()*celda+3, posicion.getY()*celda+3, celda-6, celda-6); //Permite que la comida quede centrada dentro de las cuadriculas, creando un margen de 3 centimetros para que no queden pegados al borde

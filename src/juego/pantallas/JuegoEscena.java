@@ -37,6 +37,18 @@ public class JuegoEscena extends Escena {
     private static final int MAX_PASOS_SIN_COMER = 800;
     private static final int AVISO_PASOS_SIN_COMER = 650;
 
+    // La serpiente da un paso cada 0,13 s. La podrida dura 10 s, pero se cuenta en pasos
+    // y no en segundos de reloj: así la pausa la congela y Z la rebobina junto con el resto.
+    private static final double SEGUNDOS_POR_PASO = 0.13;
+    private static final int SEGUNDOS_PODRIDA = 10;
+    private static final int PASOS_PODRIDA = (int) Math.round(SEGUNDOS_PODRIDA / SEGUNDOS_POR_PASO);
+
+    // Un ejemplar de cada tipo para la referencia del HUD: el nombre, los puntos y el
+    // color salen de la clase misma, así la referencia no se desactualiza si cambian.
+    private static final Comida REF_MANZANA = new Manzana(new Posicion(0, 0));
+    private static final Comida REF_DORADA = new ManzanaDorada(new Posicion(0, 0));
+    private static final Comida REF_PODRIDA = new ManzanaPodrida(new Posicion(0, 0));
+
     // La serpiente recibe por constructor la lista donde guardará su cuerpo
     // (se depende de lo que hace la lista, no de cómo está hecha por dentro).
     private final Serpiente serpiente = new Serpiente(new ListaDoble<Posicion>());
@@ -49,11 +61,12 @@ public class JuegoEscena extends Escena {
 
     // Temporizador del kit: avanzar(dt) devuelve true cada 0,13 s.
     // La serpiente da un paso cada 0,13 s sin importar cuántas veces se llame a actualizar.
-    private final Temporizador paso = new Temporizador(0.13);
+    private final Temporizador paso = new Temporizador(SEGUNDOS_POR_PASO);
 
     private Comida comida;
     private boolean terminado, pausa; // "terminado" hoy solo se asigna; no se lee en ningún lado
     private int pasosDesdeComida;     // cuenta pasos sin comer, para cortar partidas trabadas
+    private int pasosDeLaComida;      // cuánto lleva en el tablero la comida actual (vence la podrida)
 
     // El motor lo llama cada vez que esta escena se activa.
     // Deja todo en estado inicial, así se puede volver a jugar con la misma instancia.
@@ -66,7 +79,7 @@ public class JuegoEscena extends Escena {
         pausa = false;
         pasosDesdeComida = 0;
         paso.reiniciar();
-        generarComida();
+        generarComida(true);
     }
 
     // Se llama en cada paso del motor (1/120 s): lee teclas y, si corresponde, avanza el juego.
@@ -132,7 +145,7 @@ public class JuegoEscena extends Escena {
         //    Todavía no se apila: falta saber cuántos puntos gana el paso (ver el punto 6).
         int puntosAntes = serpiente.getPuntos();
         EstadoMovimiento foto = new EstadoMovimiento(serpiente.getCuerpo(), serpiente.getDireccion(),
-                serpiente.getCrecer(), comida, pasosDesdeComida);
+                serpiente.getCrecer(), comida, pasosDesdeComida, pasosDeLaComida);
         // 3) Mueve la serpiente.
         serpiente.mover();
         pasosDesdeComida++;
@@ -149,8 +162,15 @@ public class JuegoEscena extends Escena {
         //    la subclase real (Manzana, ManzanaDorada, ManzanaPodrida) sin preguntar el tipo.
         if (cabeza.equals(comida.getPosicion())) {
             comida.aplicar(serpiente);
-            generarComida();
+            generarComida(true);
             pasosDesdeComida = 0;
+        } else {
+            // 5b) La comida que vence (la podrida) desaparece si nadie la comió a tiempo, y en
+            //     su lugar aparece una buena: si saliera otra podrida, habría que esperar de nuevo.
+            pasosDeLaComida++;
+            if (comida.vence() && pasosDeLaComida >= PASOS_PODRIDA) {
+                generarComida(false);
+            }
         }
         // 6) Ya se sabe cuánto sumó o restó el paso: se completa la foto y se apila.
         foto.setPuntosGanados(serpiente.getPuntos() - puntosAntes);
@@ -191,6 +211,7 @@ public class JuegoEscena extends Escena {
         // y el contador de pasos sin comer de ese momento.
         comida = estado.getComida();
         pasosDesdeComida = estado.getPasosDesdeComida();
+        pasosDeLaComida = estado.getPasosDeLaComida();
         // Puntos: a los actuales se les saca lo que ganó ese paso y el costo de deshacer.
         // Se calcula sobre los actuales, no sobre los guardados, para que cada Z cobre sus 5.
         // puedeDeshacer() ya garantizó que el resultado no queda negativo.
@@ -199,8 +220,10 @@ public class JuegoEscena extends Escena {
         giros.vaciar();
     }
 
-    // Crea comida nueva en una celda libre y de tipo al azar.
-    private void generarComida() {
+    // Crea comida nueva en una celda libre y de tipo al azar. Con permitirPodrida en false
+    // sale sólo roja o dorada: se usa para reemplazar a una podrida que venció.
+    private void generarComida(boolean permitirPodrida) {
+        pasosDeLaComida = 0;
         Posicion p;
         // Repite hasta encontrar una celda que NO esté ocupada por la serpiente.
         do {
@@ -208,7 +231,7 @@ public class JuegoEscena extends Escena {
         } while (serpiente.contiene(p));
 
         // Tres subclases de Comida; la variable "comida" es del tipo padre (polimorfismo).
-        int tipo = azar.nextInt(3);
+        int tipo = permitirPodrida ? azar.nextInt(3) : 1 + azar.nextInt(2);
         if (tipo == 0) {
             comida = new ManzanaPodrida(p);
         } else if (tipo == 1) {
@@ -241,10 +264,22 @@ public class JuegoEscena extends Escena {
         Texto.izquierda(grafico, "Tamaño: " + serpiente.getCuerpo().tamanio(), 190, FILAS * CELDA + 30, 16, new Color(130, 245, 150));
         Texto.izquierda(grafico, "Z deshacer (-5)   P pausa   ESC menú", 16, FILAS * CELDA + 62, 15, Color.LIGHT_GRAY);
         // Regla del límite de pasos: se avisa antes de cortar la partida por no comer.
+        // Va abajo a la izquierda porque la derecha la ocupa la referencia de manzanas.
         if (pasosDesdeComida > AVISO_PASOS_SIN_COMER) {
             int quedan = MAX_PASOS_SIN_COMER - pasosDesdeComida;
-            Texto.derecha(grafico, "¡Comé algo! Quedan " + quedan + " pasos", COLUMNAS * CELDA - 16, FILAS * CELDA + 30, 16, new Color(255, 120, 120));
+            Texto.izquierda(grafico, "¡Comé algo! Quedan " + quedan + " pasos", 16, FILAS * CELDA + 88, 14, new Color(255, 120, 120));
         }
+        // Cuenta regresiva de la podrida: se redondea para arriba, así nunca muestra 0 s
+        // mientras todavía está en el tablero.
+        if (comida.vence()) {
+            int pasosQueQuedan = PASOS_PODRIDA - pasosDeLaComida;
+            int segundos = (int) Math.ceil(pasosQueQuedan * SEGUNDOS_POR_PASO);
+            Texto.izquierda(grafico, "Podrida: se va en " + segundos + " s", 320, FILAS * CELDA + 30, 16, REF_PODRIDA.getColor());
+        }
+        // Referencia de manzanas, abajo a la derecha.
+        dibujarReferencia(grafico, REF_MANZANA, "", FILAS * CELDA + 30);
+        dibujarReferencia(grafico, REF_DORADA, ", crece x2", FILAS * CELDA + 55);
+        dibujarReferencia(grafico, REF_PODRIDA, ", dura " + SEGUNDOS_PODRIDA + " s", FILAS * CELDA + 80);
 
         // Pausa: velo negro semitransparente (el 4.º valor, 170, es la opacidad) y cartel centrado.
         if (pausa) {
@@ -252,5 +287,15 @@ public class JuegoEscena extends Escena {
             grafico.fillRect(0, 0, COLUMNAS * CELDA, FILAS * CELDA);
             Texto.centrado(grafico, "PAUSA", COLUMNAS * CELDA / 2.0, FILAS * CELDA / 2.0, 38, Color.WHITE);
         }
+    }
+
+    // Una fila de la referencia: el círculo con el color de la manzana y, al lado, su
+    // nombre y sus puntos con signo. "y" es la línea base del texto.
+    private void dibujarReferencia(Graphics2D grafico, Comida ejemplo, String detalle, int y) {
+        int x = 540;
+        grafico.setColor(ejemplo.getColor());
+        grafico.fillOval(x, y - 12, 14, 14);
+        String puntos = ejemplo.getPuntos() > 0 ? "+" + ejemplo.getPuntos() : String.valueOf(ejemplo.getPuntos());
+        Texto.izquierda(grafico, ejemplo.getNombre() + "  " + puntos + detalle, x + 22, y, 13, Color.LIGHT_GRAY);
     }
 }

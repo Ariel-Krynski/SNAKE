@@ -20,4 +20,10 @@ public class ManzanaPodrida extends Comida {
     public String getNombre() {
         return "Manzana podrida";
     }
+
+    // Se pudre del todo y desaparece: no tiene sentido obligar a comerla para seguir.
+    @Override
+    public boolean vence() {
+        return true;
+    }
 }
