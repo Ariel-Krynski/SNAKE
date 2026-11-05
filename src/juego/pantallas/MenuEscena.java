@@ -53,5 +53,9 @@ public class MenuEscena extends Escena {
         Texto.centrado(grafico, "Manzana roja= +10   Dorada= +30 y crece doble   Podrida= -15", 400, 275, 14, new Color(255, 205, 100));
         Texto.centrado(grafico, "Click para jugar", 400, 370, 24, Color.WHITE);
         Texto.centrado(grafico, "Juguemos", 400, 430, 15, new Color(150, 170, 185));
+        // El récord sólo aparece cuando hay uno: la primera vez quedaría un "Récord: 0".
+        if (FinEscena.getRecord() > 0) {
+            Texto.centrado(grafico, "Récord: " + FinEscena.getRecord(), 400, 480, 18, new Color(255, 205, 55));
+        }
     }
 }

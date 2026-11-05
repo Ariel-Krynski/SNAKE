@@ -262,6 +262,8 @@ public class JuegoEscena extends Escena {
         grafico.fillRect(0, FILAS * CELDA, COLUMNAS * CELDA, 100);
         Texto.izquierda(grafico, "Puntaje: " + serpiente.getPuntos(), 16, FILAS * CELDA + 30, 18, Color.WHITE);
         Texto.izquierda(grafico, "Tamaño: " + serpiente.getCuerpo().tamanio(), 190, FILAS * CELDA + 30, 16, new Color(130, 245, 150));
+        // El récord de las partidas anteriores (lo lleva FinEscena, sólo en memoria).
+        Texto.izquierda(grafico, "Récord: " + FinEscena.getRecord(), 320, FILAS * CELDA + 30, 16, new Color(255, 205, 55));
         Texto.izquierda(grafico, "Z deshacer (-5)   P pausa   ESC menú", 16, FILAS * CELDA + 62, 15, Color.LIGHT_GRAY);
         // Regla del límite de pasos: se avisa antes de cortar la partida por no comer.
         // Va abajo a la izquierda porque la derecha la ocupa la referencia de manzanas.
@@ -270,11 +272,12 @@ public class JuegoEscena extends Escena {
             Texto.izquierda(grafico, "¡Comé algo! Quedan " + quedan + " pasos", 16, FILAS * CELDA + 88, 14, new Color(255, 120, 120));
         }
         // Cuenta regresiva de la podrida: se redondea para arriba, así nunca muestra 0 s
-        // mientras todavía está en el tablero.
+        // mientras todavía está en el tablero. Se calcula en proporción a los 10 s y no
+        // multiplicando por 0,13: los 77 pasos duran 10,01 s y al aparecer mostraba 11.
         if (comida.vence()) {
             int pasosQueQuedan = PASOS_PODRIDA - pasosDeLaComida;
-            int segundos = (int) Math.ceil(pasosQueQuedan * SEGUNDOS_POR_PASO);
-            Texto.izquierda(grafico, "Podrida: se va en " + segundos + " s", 320, FILAS * CELDA + 30, 16, REF_PODRIDA.getColor());
+            int segundos = (int) Math.ceil((double) pasosQueQuedan * SEGUNDOS_PODRIDA / PASOS_PODRIDA);
+            Texto.izquierda(grafico, "Podrida: se va en " + segundos + " s", 320, FILAS * CELDA + 62, 16, REF_PODRIDA.getColor());
         }
         // Referencia de manzanas, abajo a la derecha.
         dibujarReferencia(grafico, REF_MANZANA, "", FILAS * CELDA + 30);
